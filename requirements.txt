@@ -1,0 +1,5 @@
+pytz
+boto3
+urllib3
+moto[dynamodb]
+pytest
