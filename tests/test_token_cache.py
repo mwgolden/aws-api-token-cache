@@ -1,7 +1,7 @@
 import boto3
 import pytest
 from moto import mock_aws
-from api_token_cache.token_cache import get_configuration
+from api_token_cache.token_cache import get_configuration, get_client_credentials
 
 
 TABLE_NAME = "ApiConfigTest"
@@ -27,6 +27,30 @@ def dynamodb():
         yield dynamodb
 
 
+CLIENT_ID = "TestAPIClient"
+SECRET = "ItsASecret!"
+
+@pytest.fixture(scope="session")
+def mock_ssm():
+    with mock_aws():
+        ssm = boto3.client("ssm")
+        ssm.put_parameter(
+            Name="test_api_client_id",
+            Description="client id",
+            Value=CLIENT_ID,
+            Type="String"
+        )
+
+        ssm.put_parameter(
+            Name="test_api_client_secret",
+            Description="client secret",
+            Value=SECRET,
+            Type="SecureString"
+        )
+
+        yield ssm
+        
+
 def test_get_configuration(dynamodb):
 
     table = dynamodb.Table(TABLE_NAME)
@@ -46,3 +70,12 @@ def test_get_configuration(dynamodb):
 
     assert result == item["config"]
 
+
+
+def test_get_client_credentials(mock_ssm):
+         client_name = "test_api_client_id"
+         secret_name = "test_api_client_secret"
+         client_id, client_secret = get_client_credentials(client_name, secret_name)
+
+         assert CLIENT_ID == client_id
+         assert SECRET == client_secret

@@ -37,14 +37,14 @@ def get_cached_auth_token(bot_name: str, api_token_cache_table: str):
         return response
     return None
 
-def get_client_credentials(client_id, client_secret):
+def get_client_credentials(client_name, secret_name):
     """
     Get client id and secret stored in AWS Parameter Store
     """
     ssm_client = boto3.client('ssm')
-    client_id_param = ssm_client.get_parameter(Name=client_id)
-    client_secret_param = ssm_client.get_parameter(Name=client_secret, WithDecryption=True)
-    return client_id_param['Parameter']['Value'], client_secret_param['Parameter']['Value']
+    client_id = ssm_client.get_parameter(Name=client_name)
+    client_secret = ssm_client.get_parameter(Name=secret_name, WithDecryption=True)
+    return client_id['Parameter']['Value'], client_secret['Parameter']['Value']
 
 def cache_token(bot_name, data, api_token_cache_table):
     """
