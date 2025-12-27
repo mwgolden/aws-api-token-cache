@@ -7,6 +7,6 @@ terraform {
   backend "s3" {
     bucket = "com.wgolden.tfstate"
     key    = "api-token-cache-lambda-layer/tfstate"
-    region = "use-east-1"
+    region = "us-east-1"
   }
 }
