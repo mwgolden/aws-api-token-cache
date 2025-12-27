@@ -21,7 +21,7 @@ def get_cached_auth_token(bot_name: str, api_token_cache_table: str):
     """
     db = boto3.resource('dynamodb')
     db_table = db.Table(api_token_cache_table) # type: ignore
-    response = db_table.query(
+    result = db_table.query(
         Limit=1,
         KeyConditionExpression='bot_name=:botname',
         ExpressionAttributeValues={
@@ -29,12 +29,12 @@ def get_cached_auth_token(bot_name: str, api_token_cache_table: str):
         },
         ScanIndexForward=False
     )
-    if response['Count'] == 1:
-        response = response['Items'][0]['access_token']
+    if result['Count'] == 1:
+        cached_token = result['Items'][0]['access_token']
         epoch_time = int(time.time())
-        exp_date = response['Items'][0]['expires']
-        response['expires_in'] = exp_date - epoch_time
-        return response
+        exp_date = result['Items'][0]['expires']
+        cached_token['expires_in'] = exp_date - epoch_time
+        return cached_token
     return None
 
 def get_client_credentials(client_name, secret_name):

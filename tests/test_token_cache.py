@@ -1,10 +1,11 @@
 import boto3
 import pytest
 from moto import mock_aws
-from api_token_cache.token_cache import get_configuration, get_client_credentials
+from api_token_cache.token_cache import get_configuration, get_client_credentials, cache_token, get_cached_auth_token
 
 
 TABLE_NAME = "ApiConfigTest"
+CACHE_TABLE_NAME = "ApiCacheTest"
 BOT_NAME = "test_bot"
 
 @pytest.fixture(scope="session")
@@ -23,7 +24,21 @@ def dynamodb():
             BillingMode="PAY_PER_REQUEST"
         )
 
+        cache_table = dynamodb.create_table(  # type: ignore
+             TableName=CACHE_TABLE_NAME,
+             KeySchema=[
+                  {"AttributeName": "bot_name", "KeyType": "HASH"},
+                  {"AttributeName": "expires", "KeyType": "RANGE"}
+             ],
+             AttributeDefinitions=[
+                  { "AttributeName": "bot_name", "AttributeType": "S" },
+                  { "AttributeName": "expires", "AttributeType": "N" }
+             ],
+            BillingMode="PAY_PER_REQUEST"
+        )
+
         table.wait_until_exists()
+        cache_table.wait_until_exists()
         yield dynamodb
 
 
@@ -79,3 +94,38 @@ def test_get_client_credentials(mock_ssm):
 
          assert CLIENT_ID == client_id
          assert SECRET == client_secret
+
+
+TEST_DATA = {
+    'access_token': '1234567890ghghuyuokpoclkxdblBCVLKDgbyuvcvkdvnjknhis',
+    'token_type': 'bearer',
+    'expires_in': 86400,
+    'scope': '*'
+}
+
+def test_cache_token_retrieval(dynamodb):
+    cache_token(
+          bot_name=BOT_NAME,
+          data=TEST_DATA,
+          api_token_cache_table=CACHE_TABLE_NAME
+     )
+
+    response = get_cached_auth_token(
+          bot_name=BOT_NAME,
+          api_token_cache_table=CACHE_TABLE_NAME
+     )
+    
+    assert response is not None
+    assert set(response.keys()) == {"access_token", "token_type", "expires_in", "scope"}
+    assert TEST_DATA['access_token'] == response['access_token']
+    assert TEST_DATA['token_type'] == response['token_type']
+    assert TEST_DATA['scope'] == response['scope']
+
+
+def test_bot_isolation(dynamodb):
+     response = get_cached_auth_token(
+          bot_name="IDontExist",
+          api_token_cache_table=CACHE_TABLE_NAME
+     )
+
+     assert response is None
