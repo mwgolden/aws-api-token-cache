@@ -1,26 +1,80 @@
 import boto3
 import time
 import sys
+from models import ApiConfig, AuthMethod, ApiKeyAuth, ClientCredentialsAuth, DynamoDbConfig, CachedApiToken
+from typing import Optional
 
-def get_configuration(bot_name: str, api_config_table: str):
+def parse_api_config(config: dict) -> ApiConfig:
+    user_agent = config["user_agent"]
+    http_method = config["http_method"]
+    requires_auth = config.get("authentication_method", None)
+    if not requires_auth:
+        return ApiConfig(
+            user_agent=config["user_agent"],
+            http_method=config["http_method"],
+            auth=None
+        )
+    auth_method = AuthMethod(config["authentication_method"])
+    if auth_method is AuthMethod.CLIENT_CREDENTIALS:
+        auth = ClientCredentialsAuth(
+                auth_endpoint=config["auth_endpoint"],
+                scope=config["scope"],
+                client_id=config["client_id"],
+                client_secret=config["client_secret"]
+            )
+    elif auth_method is AuthMethod.API_KEY:
+        auth = ApiKeyAuth(api_key=config["api_key"])
+    else:
+        raise ValueError(f"Unsupported authentication method: {auth_method}")
+    
+    return ApiConfig(
+        user_agent=user_agent,
+        http_method=http_method,
+        auth=auth
+    )
+
+def parse_token_cache_response(item: dict) -> CachedApiToken:
+    cached_token = item["access_token"]
+    bot_name = item["bot_name"]
+    token_type = cached_token["token_type"]
+    scope = cached_token["scope"]
+    epoch_time = int(time.time())
+    exp_date = item.get("expires", None)
+    expires_in = exp_date - epoch_time if exp_date else sys.maxsize
+    
+    return CachedApiToken(
+        bot_name=bot_name,
+        access_token=cached_token,
+        token_type=token_type,
+        scope=scope,
+        expires=expires_in
+    )
+
+
+def get_configuration(bot_name: str, db_config: DynamoDbConfig) -> ApiConfig:
     """
     Get API configuration from DynamoDb table
     """
     db = boto3.resource('dynamodb')
-    db_table = db.Table(api_config_table) # type: ignore
+    db_table = db.Table(db_config.api_config_table) # type: ignore
     response = db_table.get_item(
         Key={
             'bot_name': bot_name
         }
     )
-    return response['Item']['config']
+    item = response.get("Item")
+    if not item:
+        raise KeyError(f"No configuration exists for bot: {bot_name}")
+    config = item['config']
+    return parse_api_config(config)
+    
 
-def get_cached_auth_token(bot_name: str, api_token_cache_table: str):
+def get_cached_auth_token(bot_name: str, db_config: DynamoDbConfig) -> Optional[CachedApiToken]:
     """
     Get cached api token from DynamoDb Table
     """
     db = boto3.resource('dynamodb')
-    db_table = db.Table(api_token_cache_table) # type: ignore
+    db_table = db.Table(db_config.api_token_cache_table) # type: ignore
     result = db_table.query(
         Limit=1,
         KeyConditionExpression='bot_name=:botname',
@@ -30,11 +84,8 @@ def get_cached_auth_token(bot_name: str, api_token_cache_table: str):
         ScanIndexForward=False
     )
     if result['Count'] == 1:
-        cached_token = result['Items'][0]['access_token']
-        epoch_time = int(time.time())
-        exp_date = result['Items'][0]['expires']
-        cached_token['expires_in'] = exp_date - epoch_time
-        return cached_token
+        item = dict(result['Items'][0])
+        return parse_token_cache_response(item)
     return None
 
 def get_client_credentials(client_name, secret_name):
@@ -46,23 +97,21 @@ def get_client_credentials(client_name, secret_name):
     client_secret = ssm_client.get_parameter(Name=secret_name, WithDecryption=True)
     return client_id['Parameter']['Value'], client_secret['Parameter']['Value']
 
-def cache_token(bot_name, data, api_token_cache_table):
+def cache_token(token: CachedApiToken, db_config: DynamoDbConfig):
     """
-    Cache an access token in DynamoDb table
+    Persist an access token in DynamoDb table
     """
-    if 'expires_in' in data.keys():
-        epoch_time = int(time.time())
-        ttl_seconds =  data['expires_in']
-        expires_on = epoch_time + ttl_seconds
-    else:
-        expires_on = sys.maxsize
-        data['expires_in'] = expires_on
+    
     db = boto3.resource('dynamodb')
-    table = db.Table(api_token_cache_table) # type: ignore
+    table = db.Table(db_config.api_token_cache_table) # type: ignore
     table.put_item(
         Item={
-                'bot_name': bot_name,
-                'expires': expires_on,
-                'access_token': data
+                "bot_name": token.bot_name,
+                "expires": token.expires,
+                "access_token": {
+                    "access_token": token.access_token,
+                    "token_type": token.token_type,
+                    "scope": token.scope
+                }
         }
     )
