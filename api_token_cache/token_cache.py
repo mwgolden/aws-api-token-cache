@@ -1,26 +1,25 @@
 import boto3
-import time
-import sys
-from models import ApiConfig, AuthMethod, ApiKeyAuth, ClientCredentialsAuth, DynamoDbConfig, CachedApiToken
-from typing import Optional
+from api_token_cache.models import ApiConfig, AuthMethod, ApiKeyAuth, ClientCredentialsAuth, DynamoDbConfig, CachedApiToken
+from typing import Optional, Tuple
 
 def parse_api_config(config: dict) -> ApiConfig:
     user_agent = config["user_agent"]
     http_method = config["http_method"]
-    requires_auth = config.get("authentication_method", None)
-    if not requires_auth:
+    grant_type = config.get("grant_type", None)
+    if grant_type is None:
         return ApiConfig(
             user_agent=config["user_agent"],
             http_method=config["http_method"],
             auth=None
         )
-    auth_method = AuthMethod(config["authentication_method"])
+    auth_method = AuthMethod(grant_type)
     if auth_method is AuthMethod.CLIENT_CREDENTIALS:
         auth = ClientCredentialsAuth(
                 auth_endpoint=config["auth_endpoint"],
                 scope=config["scope"],
                 client_id=config["client_id"],
-                client_secret=config["client_secret"]
+                client_secret=config["client_secret"],
+                grant_type=config["grant_type"]
             )
     elif auth_method is AuthMethod.API_KEY:
         auth = ApiKeyAuth(api_key=config["api_key"])
@@ -36,18 +35,16 @@ def parse_api_config(config: dict) -> ApiConfig:
 def parse_token_cache_response(item: dict) -> CachedApiToken:
     cached_token = item["access_token"]
     bot_name = item["bot_name"]
-    token_type = cached_token["token_type"]
-    scope = cached_token["scope"]
-    epoch_time = int(time.time())
-    exp_date = item.get("expires", None)
-    expires_in = exp_date - epoch_time if exp_date else sys.maxsize
+    token_type = item["token_type"]
+    scope = item["scope"]
+    expires = item["expires"]
     
     return CachedApiToken(
         bot_name=bot_name,
         access_token=cached_token,
         token_type=token_type,
         scope=scope,
-        expires=expires_in
+        db_expires=expires
     )
 
 
@@ -88,7 +85,7 @@ def get_cached_auth_token(bot_name: str, db_config: DynamoDbConfig) -> Optional[
         return parse_token_cache_response(item)
     return None
 
-def get_client_credentials(client_name, secret_name):
+def get_client_credentials(client_name: str, secret_name: str) -> Tuple[str, str]:
     """
     Get client id and secret stored in AWS Parameter Store
     """
@@ -107,11 +104,9 @@ def cache_token(token: CachedApiToken, db_config: DynamoDbConfig):
     table.put_item(
         Item={
                 "bot_name": token.bot_name,
-                "expires": token.expires,
-                "access_token": {
-                    "access_token": token.access_token,
-                    "token_type": token.token_type,
-                    "scope": token.scope
-                }
+                "expires": token.db_expires,
+                "access_token": token.access_token,
+                "token_type": token.token_type,
+                "scope": token.scope
         }
     )

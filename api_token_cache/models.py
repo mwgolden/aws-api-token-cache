@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Optional, Union
 from enum import Enum
+import time
 
 class AuthMethod(Enum):
     CLIENT_CREDENTIALS = "client_credentials"
@@ -12,6 +13,7 @@ class ClientCredentialsAuth:
     scope: str
     client_id: str
     client_secret: str
+    grant_type: str
 
 @dataclass
 class ApiKeyAuth:
@@ -34,4 +36,4 @@ class CachedApiToken:
     access_token: str
     token_type: str
     scope: str
-    expires: float
+    db_expires: int
