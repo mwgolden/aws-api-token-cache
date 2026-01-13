@@ -22,7 +22,7 @@ def get_auth_token(user_agent: str, auth_config: ClientCredentialsAuth, http: Po
         headers=headers,
         fields=data
     )
-    return http_response.json()
+    return json.loads(http_response.data)
 
 def http_oauth_client_credentials(url:str, bot_name:str, db_config:DynamoDbConfig, http:PoolManager) -> dict:
     bot_config = get_configuration(bot_name=bot_name, db_config=db_config)
