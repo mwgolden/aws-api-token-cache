@@ -12,40 +12,7 @@ db_config =  DynamoDbConfig(
                 api_token_cache_table="ApiCacheTest"
             )
 
-@pytest.fixture(scope="session")
-def dynamodb():
-    with mock_aws():
-        dynamodb = boto3.resource("dynamodb", region_name="us-east-1")
 
-        table = dynamodb.create_table( # type: ignore
-            TableName=db_config.api_config_table,
-            KeySchema=[
-                {"AttributeName": "bot_name", "KeyType": "HASH" }
-            ],
-            AttributeDefinitions=[
-                { "AttributeName": "bot_name", "AttributeType": "S" }
-            ],
-            BillingMode="PAY_PER_REQUEST"
-        )
-
-        cache_table = dynamodb.create_table(  # type: ignore
-             TableName=db_config.api_token_cache_table,
-             KeySchema=[
-                  {"AttributeName": "bot_name", "KeyType": "HASH"},
-                  {"AttributeName": "expires", "KeyType": "RANGE"}
-             ],
-             AttributeDefinitions=[
-                  { "AttributeName": "bot_name", "AttributeType": "S" },
-                  { "AttributeName": "expires", "AttributeType": "N" }
-             ],
-            BillingMode="PAY_PER_REQUEST"
-        )
-
-        table.wait_until_exists()
-        cache_table.wait_until_exists()
-        yield dynamodb
-
-        
 
 def test_get_configuration(dynamodb):
 

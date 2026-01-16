@@ -67,4 +67,4 @@ def http_oauth_client_credentials(url:str, bot_name:str, db_config:DynamoDbConfi
         headers=headers
     )
 
-    return response.json()
+    return json.loads(response.data)
