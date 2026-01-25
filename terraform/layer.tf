@@ -1,6 +1,6 @@
 data "archive_file" "api_token_cache" {
   type = "zip"
-  source_dir = "../api_token_cache/"
+  source_dir = "../src"
   output_path = "../build/api_token_cache.zip"
 }
 
