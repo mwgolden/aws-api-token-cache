@@ -5,14 +5,14 @@ from typing import Optional, Tuple
 def parse_api_config(config: dict) -> ApiConfig:
     user_agent = config["user_agent"]
     http_method = config["http_method"]
-    grant_type = config.get("grant_type", None)
-    if grant_type is None:
+    auth_type = config.get("grant_type", config.get("authentication_method", None))
+    if auth_type is None:
         return ApiConfig(
             user_agent=config["user_agent"],
             http_method=config["http_method"],
             auth=None
         )
-    auth_method = AuthMethod(grant_type)
+    auth_method = AuthMethod(auth_type)
     if auth_method is AuthMethod.CLIENT_CREDENTIALS:
         auth = ClientCredentialsAuth(
                 auth_endpoint=config["auth_endpoint"],

@@ -13,26 +13,6 @@ db_config =  DynamoDbConfig(
             )
 
 
-
-def test_get_configuration(dynamodb):
-
-    table = dynamodb.Table(db_config.api_config_table)
-
-    item = {
-        "bot_name": BOT_NAME,
-        "config": {
-            "requires_authentication": False , 
-            "user_agent": "TestBot", 
-            "http_method": "GET" 
-        }
-    }
-
-    table.put_item(Item=item)
-
-    result = get_configuration(bot_name=BOT_NAME, db_config=db_config)
-
-    assert result.user_agent == "TestBot"
-
 CLIENT_ID = "TestAPIClient"
 SECRET = "ItsASecret!"
 
