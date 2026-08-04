@@ -34,6 +34,7 @@ def test_http_oauth_client_credentials(mock_ssm, dynamodb, http_pool, api_respon
     item = {
         "bot_name": "test_bot",
         "config": {
+            "requires_authentication": True,
             "auth_endpoint": "https://auth.test.com/token" , 
             "client_id": "test_api_client_id", 
             "client_secret": "test_api_client_secret",

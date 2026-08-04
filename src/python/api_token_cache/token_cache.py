@@ -5,7 +5,10 @@ from typing import Optional, Tuple
 def parse_api_config(config: dict) -> ApiConfig:
     user_agent = config["user_agent"]
     http_method = config["http_method"]
+    requires_auth = config["requires_authentication"]
     auth_type = config.get("grant_type", config.get("authentication_method", None))
+    if requires_auth and auth_type in [None, False]:
+        raise ValueError("Authentication is required but no authentication type is configured")
     if auth_type is None:
         return ApiConfig(
             user_agent=config["user_agent"],
