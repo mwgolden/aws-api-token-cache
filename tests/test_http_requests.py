@@ -1,6 +1,6 @@
 import json
 import urllib3
-from api_token_cache.http_requests import get_auth_token, http_oauth_client_credentials
+from api_token_cache.http_requests import get_auth_token, http_request
 from api_token_cache.models import ClientCredentialsAuth, DynamoDbConfig
 from unittest.mock import MagicMock, patch
 
@@ -50,7 +50,7 @@ def test_http_oauth_client_credentials(mock_ssm, dynamodb, http_pool, api_respon
     
     http_pool.request.side_effect = [oauth_token_response, api_response]
     
-    response = http_oauth_client_credentials(url=url, bot_name="test_bot", db_config=db_config, http=http_pool)
+    response = http_request(url=url, bot_name="test_bot", db_config=db_config, http=http_pool)
 
     assert response["id"] == '123'
     assert response["data"] == "some_data"
