@@ -4,7 +4,7 @@ import time
 from api_token_cache.token_cache import get_configuration, get_client_credentials, cache_token, get_cached_auth_token
 from urllib3.util import make_headers
 from urllib3.poolmanager import PoolManager
-from api_token_cache.models import DynamoDbConfig, CachedApiToken, ClientCredentialsAuth
+from api_token_cache.models import DynamoDbConfig, CachedApiToken, ClientCredentialsAuth, ApiKeyAuth, ApiConfig
 
 def get_auth_token(user_agent: str, auth_config: ClientCredentialsAuth, http: PoolManager) -> dict:
     """
@@ -24,8 +24,7 @@ def get_auth_token(user_agent: str, auth_config: ClientCredentialsAuth, http: Po
     )
     return json.loads(http_response.data)
 
-def http_oauth_client_credentials(url:str, bot_name:str, db_config:DynamoDbConfig, http:PoolManager) -> dict:
-    bot_config = get_configuration(bot_name=bot_name, db_config=db_config)
+def http_oauth_client_credentials(url:str, bot_name:str, bot_config:ApiConfig, db_config:DynamoDbConfig, http:PoolManager) -> dict:
 
     cached_token = get_cached_auth_token(bot_name=bot_name, db_config=db_config)
 
@@ -68,3 +67,64 @@ def http_oauth_client_credentials(url:str, bot_name:str, db_config:DynamoDbConfi
     )
 
     return json.loads(response.data)
+
+
+def http_noauth(url:str, bot_config:ApiConfig, http:PoolManager) -> dict:
+
+    if bot_config.auth is not None:
+        raise KeyError(f"API request requires authentication of type {type(bot_config.auth).__name__}")
+    else: 
+        headers  = {
+            "User-Agent": f"{bot_config.user_agent}"
+        }
+
+        response = http.request(
+            bot_config.http_method,
+            url,
+            headers=headers
+        )
+
+        return json.loads(response.data)
+
+def http_api_key(url:str, bot_config:ApiConfig, http:PoolManager) -> dict:
+
+    if not isinstance(bot_config.auth, ApiKeyAuth):
+        raise TypeError(f"ApiKeyAuth is required, attempted to use {type(bot_config.auth).__name__}")
+    else:
+        headers = {
+            "Authorization": bot_config.auth.api_key,
+            "User-Agent": bot_config.user_agent
+        }
+
+        response = http.request(
+            bot_config.http_method,
+            url,
+            headers=headers
+        )
+
+        return json.loads(response.data)
+
+
+def http_request(url:str, bot_name:str, db_config:DynamoDbConfig, http:PoolManager) -> dict:
+    bot_config = get_configuration(bot_name=bot_name, db_config=db_config)
+
+    if isinstance(bot_config.auth, ClientCredentialsAuth):
+        return http_oauth_client_credentials(
+            url=url,
+            bot_name=bot_name,
+            bot_config=bot_config,
+            db_config=db_config,
+            http=http
+        )
+    elif isinstance(bot_config.auth, ApiKeyAuth):
+        return http_api_key(
+            url=url,
+            bot_config=bot_config,
+            http=http
+        )
+    else:
+        return http_noauth(
+            url=url,
+            bot_config=bot_config,
+            http=http
+        )
