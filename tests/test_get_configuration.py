@@ -1,17 +1,12 @@
 import pytest
-from api_token_cache.models import ApiKeyAuth, ClientCredentialsAuth, DynamoDbConfig
+from api_token_cache.models import ApiKeyAuth, ClientCredentialsAuth
 from api_token_cache.token_cache import get_configuration
 
 
 BOT_NAME = "test_bot"
-db_config =  DynamoDbConfig(
-                api_config_table="ApiConfigTest",
-                api_token_cache_table="ApiCacheTest"
-            )
 
 
-
-def test_no_auth(dynamodb):
+def test_no_auth(dynamodb, db_config):
 
     table = dynamodb.Table(db_config.api_config_table)
 
@@ -30,7 +25,7 @@ def test_no_auth(dynamodb):
 
     assert result.auth is None
 
-def test_no_configuration(dynamodb):
+def test_no_configuration(dynamodb, db_config):
 
     table = dynamodb.Table(db_config.api_config_table)
 
@@ -39,7 +34,7 @@ def test_no_configuration(dynamodb):
     with pytest.raises(KeyError):
         result = get_configuration(bot_name=bot_name, db_config=db_config)
 
-def test_client_credentials_oauth_config(dynamodb):
+def test_client_credentials_oauth_config(dynamodb, db_config):
     item = {
         "bot_name": BOT_NAME,
         "config": {
@@ -61,7 +56,7 @@ def test_client_credentials_oauth_config(dynamodb):
     assert isinstance(result.auth, ClientCredentialsAuth)
 
 
-def test_api_key_auth(dynamodb):
+def test_api_key_auth(dynamodb, db_config):
     item = {
         "bot_name": BOT_NAME,
         "config": {

@@ -7,10 +7,6 @@ from api_token_cache.token_cache import get_configuration, get_client_credential
 
 
 BOT_NAME = "test_bot"
-db_config =  DynamoDbConfig(
-                api_config_table="ApiConfigTest",
-                api_token_cache_table="ApiCacheTest"
-            )
 
 
 CLIENT_ID = "TestAPIClient"
@@ -32,7 +28,7 @@ TEST_DATA = {
     'scope': '*'
 }
 
-def test_cache_token_retrieval(dynamodb):
+def test_cache_token_retrieval(dynamodb, db_config):
 
     epoch_time = int(time.time())
     ttl_seconds =  86400
@@ -61,7 +57,7 @@ def test_cache_token_retrieval(dynamodb):
     assert response.access_token == token.access_token
 
 
-def test_bot_isolation(dynamodb):
+def test_bot_isolation(dynamodb, db_config):
      response = get_cached_auth_token(
           bot_name="IDontExist",
             db_config=db_config

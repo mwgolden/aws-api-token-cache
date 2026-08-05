@@ -36,12 +36,6 @@ def mock_ssm():
 
         yield ssm
 
-BOT_NAME = "test_bot"
-db_config =  DynamoDbConfig(
-                api_config_table="ApiConfigTest",
-                api_token_cache_table="ApiCacheTest"
-            )
-
 @pytest.fixture(scope="session")
 def db_config():
     return DynamoDbConfig(
