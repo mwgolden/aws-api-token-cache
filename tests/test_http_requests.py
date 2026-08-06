@@ -32,7 +32,7 @@ def test_http_oauth_client_credentials(mock_ssm, dynamodb, http_pool, api_respon
     table = dynamodb.Table(db_config.api_config_table)
 
     item = {
-        "bot_name": "test_bot",
+        "bot_name": "oauth_test_bot",
         "config": {
             "requires_authentication": True,
             "auth_endpoint": "https://auth.test.com/token" , 
@@ -51,7 +51,7 @@ def test_http_oauth_client_credentials(mock_ssm, dynamodb, http_pool, api_respon
     
     http_pool.request.side_effect = [oauth_token_response, api_response]
     
-    response = http_request(url=url, bot_name="test_bot", db_config=db_config, http=http_pool)
+    response = http_request(url=url, bot_name="oauth_test_bot", db_config=db_config, http=http_pool)
 
     assert response["id"] == '123'
     assert response["data"] == "some_data"
