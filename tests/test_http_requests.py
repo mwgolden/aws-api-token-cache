@@ -21,14 +21,8 @@ def test_get_auth_token(mock_ssm, http_pool, oauth_token_response):
     assert token["access_token"] == "1234567890ghghuyuokpoclkxdblBCVLKDgbyuvcvkdvnjknhis"
 
 
-def test_http_oauth_client_credentials(mock_ssm, dynamodb, http_pool, api_response, oauth_token_response):
-
-    db_config =  DynamoDbConfig(
-                api_config_table="ApiConfigTest",
-                api_token_cache_table="ApiCacheTest"
-            )
-
-
+def test_http_oauth_client_credentials(mock_ssm, db_config, dynamodb, http_pool, api_response, oauth_token_response):
+    
     table = dynamodb.Table(db_config.api_config_table)
 
     item = {

@@ -4,7 +4,7 @@ import json
 from unittest.mock import MagicMock
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def oauth_token_response():
     response = MagicMock(spec=urllib3.response.HTTPResponse)
     response.status = 200
@@ -16,7 +16,7 @@ def oauth_token_response():
 
     return response
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def api_response():
     response = MagicMock(spec=urllib3.response.HTTPResponse)
     response.status = 200

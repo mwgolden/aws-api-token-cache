@@ -16,7 +16,7 @@ def aws_creds():
     os.environ["AWS_DEFAULT_REGION"] = "us-east-1"
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def mock_ssm():
     with mock_aws():
         ssm = boto3.client("ssm")
@@ -36,7 +36,7 @@ def mock_ssm():
 
         yield ssm
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def db_config():
     return DynamoDbConfig(
         api_config_table="ApiConfigTest",
@@ -44,7 +44,7 @@ def db_config():
     )
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def dynamodb(db_config):
     with mock_aws():
         dynamodb = boto3.resource("dynamodb", region_name="us-east-1")
