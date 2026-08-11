@@ -7,5 +7,6 @@ data "archive_file" "api_token_cache" {
 resource "aws_lambda_layer_version" "api_token_cache_layer" {
   filename = data.archive_file.api_token_cache.output_path
   layer_name = "layer_api_token_cache"
-  source_code_hash = data.archive_file.api_token_cache.output_base64sha256
+  compatible_runtimes = ["python3.12"]
+  skip_destroy = true
 }
